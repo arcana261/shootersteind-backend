@@ -1,0 +1,6 @@
+# check code style via cpplint
+# see AX_CPPLINT
+if HAVE_CPPLINT
+lint:
+	$(TOOL_FIND) $(top_srcdir)/src $(top_srcdir)/test -type f -name "*.cc" -or -name "*.c" -or -name "*.cpp" -or -name "*.cu" -or -name "*.cuh" -or -name "*.h" -or -name "*.hpp" | $(XARGS) $(CPPLINT) --counting=detailed
+endif

@@ -1,0 +1,37 @@
+# run all sanitizers
+sanity: | sanity-undefined sanity-address  sanity-leak sanity-thread sanity-memory
+	@echo -e "\e[31mCleaningup...\e[0m"
+	$(MAKE) $(AM_MAKEFLAGS) clean
+	@echo -e "\e[31mDone!\e[0m"
+
+# sanitizer specs
+sanity-leak:
+if HAVE_LEAK_SANITIZER
+	@echo -e "\e[31mRunning leak sanitizer...\e[0m"
+	$(MAKE) $(AM_MAKEFLAGS) clean
+	$(MAKE) $(AM_MAKEFLAGS) CFLAGS="$(CFLAGS) -fsanitize=leak -O0" CXXFLAGS="$(CXXFLAGS) -fsanitize=leak -O0" check
+endif
+sanity-address:
+if HAVE_ADDRESS_SANITIZER
+	@echo -e "\e[31mRunning address sanitizer...\e[0m"
+	$(MAKE) $(AM_MAKEFLAGS) clean
+	$(MAKE) $(AM_MAKEFLAGS) CFLAGS="$(CFLAGS) -fsanitize=address -O0" CXXFLAGS="$(CXXFLAGS) -fsanitize=address -O0" check
+endif
+sanity-undefined:
+if HAVE_UNDEFINED_SANITIZER
+	@echo -e "\e[31mRunning undefined sanitizer...\e[0m"
+	$(MAKE) $(AM_MAKEFLAGS) clean
+	$(MAKE) $(AM_MAKEFLAGS) CFLAGS="$(CFLAGS) -fsanitize=undefined -O0" CXXFLAGS="$(CXXFLAGS) -fsanitize=undefined -O0" check
+endif
+sanity-thread:
+if HAVE_THREAD_SANITIZER
+	@echo -e "\e[31mRunning thread sanitizer...\e[0m"
+	$(MAKE) $(AM_MAKEFLAGS) clean
+	$(MAKE) $(AM_MAKEFLAGS) CFLAGS="$(CFLAGS) -DTHREAD_SANITIZER $(SANITY_THREAD_CFLAGS) -O0" CXXFLAGS="$(CXXFLAGS) $(SANITY_THREAD_CFLAGS) -O0" LDFLAGS="$(LDFLAGS) $(SANITY_THREAD_LDFLAGS)" check
+endif
+sanity-memory:
+if HAVE_MEMORY_SANITIZER
+	@echo -e "\e[31mRunning memory sanitizer...\e[0m"
+	$(MAKE) $(AM_MAKEFLAGS) clean
+	$(MAKE) $(AM_MAKEFLAGS) CFLAGS="$(CFLAGS) -fsanitize=memory -O0" CXXFLAGS="$(CXXFLAGS) -fsanitize=memory" check
+endif

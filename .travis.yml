@@ -1,0 +1,71 @@
+language: c
+dist: trusty
+sudo: required
+
+stages:
+  - lint
+  - test
+  - sanity
+  - installcheck
+  - coverage
+
+jobs:
+  include:
+    - stage: lint
+      compiler: clang
+      before_install:
+        - pip install --user cpplint
+        - sudo apt-get install -y clang-format || true
+        - sudo apt-get install -y libuv-dev
+      script:
+        - ./autogen.sh --no-changelog
+        - ./configure
+        - make lint
+        - make checkformat
+    - stage: test
+      compiler: gcc
+      before_install:
+        - sudo apt-get install -y libuv-dev
+      script:
+        - ./autogen.sh --no-changelog
+        - ./configure
+        - make distcheck
+    - stage: test
+      compiler: clang
+      before_install:
+        - sudo apt-get install -y libuv-dev
+      script:
+        - ./autogen.sh --no-changelog
+        - ./configure
+        - make distcheck
+    - stage: sanity
+      compiler: gcc
+      before_install:
+        - sudo apt-get install -y libuv-dev
+      script:
+        - ./autogen.sh --no-changelog
+        - ./configure
+        - make sanity
+    - stage: installcheck
+      compiler: gcc
+      before_install:
+        - sudo apt-get install -y libuv-dev
+      script:
+        - ./autogen.sh --no-changelog
+        - ./configure --prefix=/usr
+        - make
+        - sudo make install
+        - make post-installcheck
+    - stage: coverage
+      compiler: gcc
+      before_install:
+        - pip install --user cpp-coveralls
+        - sudo apt-get install -y lcov
+        - gem install coveralls-lcov
+        - sudo apt-get install -y libuv-dev
+      script:
+        - ./autogen.sh --no-changelog
+        - ./configure
+        - make coverage
+      after_success:
+        - coveralls-lcov --repo-token ${COVERALLS_REPO_TOKEN} coverage.info

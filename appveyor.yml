@@ -1,0 +1,35 @@
+
+version: '{build}'
+
+branches:
+  only:
+    - master
+    
+os: Visual Studio 2017
+
+environment:
+  matrix:
+  - COMPILER: msys2
+    PLATFORM: x64
+    MSYS2_ARCH: x86_64
+    MSYS2_DIR: msys64
+    MSYSTEM: MINGW64
+    BIT: 64
+    BUILDTOOL: make
+    USE_MSYS: true
+
+install:
+  - C:\msys64\usr\bin\bash -l -c "pacman -Sy --needed --noconfirm pacman 2>&1"
+  - C:\msys64\usr\bin\bash -l -c "pacman -S --needed --noconfirm base-devel mingw-w64-i686-toolchain mingw-w64-x86_64-toolchain"
+  - C:\msys64\usr\bin\bash -l -c "mkdir -p /repos"
+  - C:\msys64\usr\bin\bash -l -c "cd /repos && git clone https://github.com/Alexpux/MINGW-packages.git"
+  - C:\msys64\usr\bin\bash -l -c "cd /repos/MINGW-packages/mingw-w64-libuv && updpkgsums"
+  - C:\msys64\usr\bin\bash -l -c "cd /repos/MINGW-packages/mingw-w64-libuv && makepkg-mingw -fsiL --nocheck --noconfirm"
+  
+build_script:
+  - C:\msys64\usr\bin\bash -l -c "cd /c/projects/uvchan && ./autogen.sh --no-changelog"
+  - C:\msys64\usr\bin\bash -l -c "cd /c/projects/uvchan && ./configure"
+  - C:\msys64\usr\bin\bash -l -c "cd /c/projects/uvchan && make"
+  
+test_script:
+  - C:\msys64\usr\bin\bash -l -c "cd /c/projects/uvchan && make check"

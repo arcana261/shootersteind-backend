@@ -1,0 +1,11 @@
+# autoformat code
+# see AX_CLANG_FORMAT
+if HAVE_CLANG_FORMAT
+
+format:
+	$(TOOL_FIND) $(top_srcdir)/src $(top_srcdir)/test -type f -name "*.cc" -or -name "*.c" -or -name "*.cpp" -or -name "*.cu" -or -name "*.cuh" -or -name "*.h" -or -name "*.hpp" | $(XARGS) $(CLANG_FORMAT) -style=Google -i
+
+checkformat:
+	for file in `$(TOOL_FIND) $(top_srcdir)/src $(top_srcdir)/test -type f -name "*.cc" -or -name "*.c" -or -name "*.cpp" -or -name "*.cu" -or -name "*.cuh" -or -name "*.h" -or -name "*.hpp"`; do tmp_file=`mktemp`; $(CLANG_FORMAT) -style=Google $${file} > $${tmp_file}; $(TOOL_CMP) $${file} $${tmp_file}; done
+
+endif

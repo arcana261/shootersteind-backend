@@ -1,0 +1,17 @@
+# run tests!
+if HAVE_UNITTEST
+
+AM_CFLAGS += $(PTHREAD_CFLAGS)
+AM_LDFLAGS += $(PTHREAD_LIBS)
+
+# NOTE: check ensures check_PROGRAMS are built
+# before calling check-local which calls unittest
+unittest:
+	@echo -e "\e[32m"
+	@bash -c 'let total=0; for test_prg in `echo "$(check_PROGRAMS)"`; do let "total=$$total + $$($(top_builddir)/$$test_prg -c)"; done; echo 1..$$total;'
+	@time bash -c 'let index=1; let code=0; for test_prg in `echo "$(check_PROGRAMS)"`; do $(top_builddir)/$$test_prg -i $$index --no-plan; retval=$$?; if [ $$retval -eq 100 ]; then exit -1; fi; if [ $$retval -ne 0 ]; then let code=-1; fi; let "index=$$index + $$($(top_builddir)/$$test_prg -c)"; done; if [ $$code -ne 0 ]; then exit -1; fi;'
+	@echo -e "\e[0m"
+
+check-local: unittest
+
+endif

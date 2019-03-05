@@ -1,0 +1,11 @@
+
+html-local: doxygen-run
+pdf-local: doxygen-pdf
+ps-local: doxygen-ps
+doc-local: doxygen-run
+dot-local: doxygen-run
+man-local: doxygen-run
+chm-local: doxygen-run
+chi-local: doxygen-run
+rtf-local: doxygen-run
+xml-local: doxygen-run

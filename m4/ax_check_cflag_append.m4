@@ -1,0 +1,7 @@
+AC_DEFUN([AX_CHECK_CFLAG_APPEND],
+[
+    AX_CHECK_COMPILE_FLAG([$1], [
+        CFLAGS="$CFLAGS $1"
+        DEBUG_CFLAGS="$DEBUG_CFLAGS $1"
+    ])
+])

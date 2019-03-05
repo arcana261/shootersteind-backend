@@ -1,0 +1,19 @@
+# checks whether package is installed correctly
+# and we can compile a program with it!
+#
+# the reason it is not advertised as `installcheck-local`
+# is that `make distcheck` creates a read-only filesystem
+# which we can not autogen or configure a bootstrap 
+# project.
+#
+# be sure to include this in CI
+# 
+# directions to use:
+#
+# make
+# sudo make install
+# make post-installcheck
+post-installcheck:
+	cd $(top_srcdir)/test/installcheck && ./autogen.sh
+	cd $(top_srcdir)/test/installcheck && ./configure
+	cd $(top_srcdir)/test/installcheck && $(MAKE) check

@@ -1,0 +1,17 @@
+if HAVE_COVERAGE
+
+clean-local: clean-coverage
+if DX_COND_doc
+	rm -f $(DX_CLEANFILES)
+	rm -rf $(DX_DOCDIR)
+endif DX_COND_doc
+
+else !HAVE_COVERAGE
+
+clean-local: 
+if DX_COND_doc
+	rm -f $(DX_CLEANFILES)
+	rm -rf $(DX_DOCDIR)
+endif DX_COND_doc
+
+endif !HAVE_COVERAGE

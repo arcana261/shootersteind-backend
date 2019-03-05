@@ -1,0 +1,37 @@
+if HAVE_COVERAGE
+
+coverage:
+	$(MAKE) $(AM_MAKEFLAGS) clean
+	$(MAKE) $(AM_MAKEFLAGS) \
+		CFLAGS="$(CFLAGS) $(COVERAGE_CFLAGS) $(COVERAGE_OPTFLAGS)" \
+		CXXFLAGS="$(CXXFLAGS) $(COVERAGE_CXXFLAGS) $(COVERAGE_OPTFLAGS)" \
+		LDFLAGS="$(LDFLAGS) $(COVERAGE_LDFLAGS)" \
+		LIBS="$(LIBS) $(COVERAGE_LIBS)" \
+		check
+	$(LCOV) --capture \
+		--directory "$(top_builddir)/src" \
+		--base-directory "$(abspath $(top_builddir))" \
+		--output-file $(top_builddir)/coverage.info \
+		--gcov-tool "$(GCOV)" \
+		--compat-libtool --checksum
+	$(LCOV) \
+		--extract $(top_builddir)/coverage.info "$(abspath $(top_srcdir))/src/*" \
+		--gcov-tool $(GCOV) \
+		--output-file $(top_builddir)/coverage.info
+	$(GENHTML) \
+		--prefix "$(abspath $(top_srcdir))" \
+		--output-directory $(top_builddir)/coverage \
+        --title $(PACKAGE_NAME) \
+		--legend --show-details \
+		$(GENHTML_OPTIONS) \
+		$(top_builddir)/coverage.info
+	$(MAKE) $(AM_MAKEFLAGS) CLEAN_COVERAGE_ON_CLEAN="no" clean
+
+clean-coverage:
+	find $(top_builddir) -name *.gcda -exec rm -f {} +
+	find $(top_builddir) -name *.gcno -exec rm -f {} +
+	find $(top_builddir) -name *.gcov -exec rm -f {} +
+	if [ x${CLEAN_COVERAGE_ON_CLEAN} != xno ]; then rm -f $(top_builddir)/coverage.info; fi
+	if [ x${CLEAN_COVERAGE_ON_CLEAN} != xno ]; then rm -rfv $(top_builddir)/coverage; fi
+
+endif

@@ -1,0 +1,93 @@
+/shootersteind
+
+# project output
+*_test
+*.exe
+
+# distribution
+/*.tar.gz
+/*.deb
+
+# auto generated files
+.deps
+.dirstamp
+.libs
+/Makefile
+/build-aux
+/config.h
+/config.log
+/config.status
+/libtool
+/*.pc
+/Pipfile.lock
+*.gcov
+/m4/pkg.m4
+/INSTALL
+/AUTHORS
+/ChangeLog
+/COPYING
+/NEWS
+/README
+/*.la
+/Doxyfile
+/doc
+/libuvchan*
+
+# object files
+*.o
+*.lo
+
+# code coverage
+*.gcda
+*.gcno
+/coverage.info
+/coverage
+
+# junk files
+*~
+
+# vscode
+/.vscode
+
+# http://www.gnu.org/software/automake
+
+Makefile.in
+/ar-lib
+/mdate-sh
+/py-compile
+/test-driver
+/ylwrap
+
+# http://www.gnu.org/software/autoconf
+
+/autom4te.cache
+/autoscan.log
+/autoscan-*.log
+/aclocal.m4
+/compile
+/config.guess
+/config.h.in
+/config.sub
+/configure
+/configure.scan
+/depcomp
+/install-sh
+/missing
+/stamp-h1
+
+# https://www.gnu.org/software/libtool/
+
+/ltmain.sh
+
+# http://www.gnu.org/software/texinfo
+
+/texinfo.tex
+
+# http://www.gnu.org/software/m4/
+
+m4/libtool.m4
+m4/ltoptions.m4
+m4/ltsugar.m4
+m4/ltversion.m4
+m4/lt~obsolete.m4
+autom4te.cache
