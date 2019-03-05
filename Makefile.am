@@ -1,5 +1,5 @@
 ACLOCAL_AMFLAGS = -I m4 --install
-AM_CPPFLAGS = -I$(top_srcdir)/src/shootersteind -I$(top_srcdir)/src -I$(top_srcdir)/test
+AM_CPPFLAGS = $(BOOST_CPPFLAGS) -I$(top_srcdir)/src/shootersteind -I$(top_srcdir)/src -I$(top_srcdir)/test
 AM_CFLAGS = 
 AM_LDFLAGS = 
 
@@ -11,7 +11,8 @@ EXTRA_DIST = \
 
 # include libuv as dependency
 AM_CFLAGS += $(PTHREAD_CFLAGS) 
-AM_LDFLAGS += $(PTHREAD_LIBS)
+AM_CPPFLAGS += $(PTHREAD_CFLAGS) 
+AM_LDFLAGS += $(PTHREAD_LIBS) $(BOOST_SYSTEM_LDFLAGS)
 
 # targets
 bin_PROGRAMS = shootersteind
@@ -23,11 +24,17 @@ shootersteind_LDFLAGS = $(AM_LDFLAGS)
 
 # tests
 check_PROGRAMS = \
-	test/shootersteind/queue_test
+	test/shootersteind/queue_test \
+	test/shootersteind/crow_test
 
 # test/shootersteind/sample
 test_shootersteind_queue_test_SOURCES = test/shootersteind/queue_test.cpp
 test_shootersteind_queue_test_LDADD = $(PTHREAD_LDFLAGS) $(PTHREAD_CFLAGS)
+
+test_shootersteind_crow_test_SOURCES = test/shootersteind/crow_test.cpp
+test_shootersteind_crow_test_LDADD = \
+	$(PTHREAD_LDFLAGS) $(PTHREAD_CFLAGS) \
+	$(BOOST_SYSTEM_LDFLAGS) $(BOOST_SYSTEM_LIBS)
 
 # makefile includes
 include make/lint.am

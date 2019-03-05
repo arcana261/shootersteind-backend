@@ -20,7 +20,7 @@ AM_INIT_AUTOMAKE([1.14 -Wall -Werror subdir-objects])
 
 AM_PROG_AR
 AC_PROG_CXX
-#AC_LANG([C])
+AC_LANG([C++])
 AX_COMPILER_CHECKS
 AX_CHECK_CFLAG_APPEND([-std=gnu89])
 AX_CHECK_CFLAG_APPEND([-Werror])
@@ -45,6 +45,10 @@ AX_SANITIZER
 
 # Checks for existence of coverage tools and define variables for reporting coverage
 AX_COVERAGE
+
+# require boost
+BOOST_REQUIRE([1.60])
+BOOST_SYSTEM
 
 # enable doxygen support
 DX_DOXYGEN_FEATURE(ON)
