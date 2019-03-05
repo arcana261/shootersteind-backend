@@ -1,7 +1,10 @@
-#include "crow.h"
 #include <thread>
 #include "testing.h"
 
+#ifndef LEAK_SANITIZER
+#ifndef ADDRESS_SANITIZER
+#ifndef THREAD_SANITIZER
+#include "crow.h"
 void test_should_run_server() {
     crow::SimpleApp app;
 
@@ -21,10 +24,19 @@ void test_should_run_server() {
     runner.join();
     stopper.join();
 }
+#endif
+#endif
+#endif
 
 int main(int argc, char* argv[])
 {
+#ifndef LEAK_SANITIZER
+#ifndef ADDRESS_SANITIZER
+#ifndef THREAD_SANITIZER
     T_ADD(test_should_run_server);
+#endif
+#endif
+#endif
     
     return T_RUN(argc, argv);
 }

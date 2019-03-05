@@ -19,4 +19,5 @@ cd shootersteind-backend
 ./autogen.sh
 ./configure
 make check
+make sanity
 ```
