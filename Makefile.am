@@ -18,7 +18,7 @@ bin_PROGRAMS = shootersteind
 
 # libuvchan-0.la
 shootersteind_SOURCES = \
-	src/shootersteind/main.c
+	src/shootersteind/main.cpp
 shootersteind_LDFLAGS = $(AM_LDFLAGS)
 
 # tests
