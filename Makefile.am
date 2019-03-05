@@ -10,8 +10,8 @@ EXTRA_DIST = \
 	test/testing.h
 
 # include libuv as dependency
-# AM_CFLAGS += $(LIBUV_CFLAGS) 
-# AM_LDFLAGS += $(LIBUV_LIBS)
+AM_CFLAGS += $(PTHREAD_CFLAGS) 
+AM_LDFLAGS += $(PTHREAD_LIBS)
 
 # targets
 bin_PROGRAMS = shootersteind
@@ -23,11 +23,11 @@ shootersteind_LDFLAGS = $(AM_LDFLAGS)
 
 # tests
 check_PROGRAMS = \
-	test/shootersteind/sample_test
+	test/shootersteind/queue_test
 
 # test/shootersteind/sample
-test_shootersteind_sample_test_SOURCES = test/shootersteind/sample_test.c
-test_shootersteind_sample_test_LDADD = $(lib_LTLIBRARIES)
+test_shootersteind_queue_test_SOURCES = test/shootersteind/queue_test.cpp
+test_shootersteind_queue_test_LDADD = $(PTHREAD_LDFLAGS) $(PTHREAD_CFLAGS)
 
 # makefile includes
 include make/lint.am
