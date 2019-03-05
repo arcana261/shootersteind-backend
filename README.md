@@ -5,3 +5,18 @@
 # shootersteind
 
 backend for a multipler shooter game we decided to build on hackethon!
+
+
+## setup development environment
+
+```bash
+apt-get update
+apt-get install -y git autoconf build-essential libboost-all-dev
+apt-get install -y python-pip clang-format lcov doxygen
+pip install cpplint
+git clone https://github.com/arcana261/shootersteind-backend.git
+cd shootersteind-backend
+./autogen.sh
+./configure
+make check
+```
