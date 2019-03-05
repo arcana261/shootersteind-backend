@@ -297,7 +297,7 @@ void _t_run_test(void (*fn)(void), const char* name, int index) {
   _T_RUNTIME_OK(pthread_create(&watchdog, NULL, _t_runner_watchdog, fn));
   _T_RUNTIME_OK(pthread_join(watchdog, NULL));
 #endif
-  _t_runner(fn);
+  _t_runner((void*)fn);
   gettimeofday(&stop, NULL);
 
   _format_dtime(&start, &stop, dtime, sizeof(dtime));
