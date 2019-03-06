@@ -1,11 +1,13 @@
 #include <iostream>
 #include "crow.h"
 #include "routes/routes.h"
+#include "shootersteind/loop.h"
 
 int main()  {
     crow::SimpleApp app;
 
     shooterstein::register_routes(app);
+    shooterstein::internal::initialize_loop(::std::chrono::milliseconds(100));
 
     /*
     {

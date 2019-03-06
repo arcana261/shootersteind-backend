@@ -5,6 +5,7 @@
 #include <map>
 #include <mutex>
 #include <thread>
+#include <memory>
 #include "shootersteind/client.h"
 #include "crow.h"
 
@@ -13,8 +14,9 @@ namespace shooterstein {
         ::std::chrono::milliseconds _every;
         volatile int _nextid;
         ::std::mutex _mutex;
-        ::std::map<int, ::shooterstein::Client*> _clients;
+        ::std::map<int, ::std::shared_ptr<::shooterstein::Client> > _clients;
         ::std::thread *_worker;
+        volatile bool _exit;
 
         Loop(::shooterstein::Loop const& x);
         Loop(::shooterstein::Loop&& x);
@@ -25,7 +27,7 @@ namespace shooterstein {
         Loop(::std::chrono::milliseconds every);
         ~Loop();
 
-        int register_client(::shooterstein::Client* client);
+        int register_client(::std::shared_ptr<::shooterstein::Client> client);
         void unregister_client(int id);
 
         void start();
@@ -33,8 +35,16 @@ namespace shooterstein {
 
     private:
         void _thread_loop();
-
+        bool _isclosed();
+        ::std::vector<::std::shared_ptr<::shooterstein::Client> > _get_clients();
+        ::crow::json::wvalue _next();
     };
+
+    Loop* get_loop();
+
+    namespace internal {
+        void initialize_loop(::std::chrono::milliseconds every);
+    }
 }
 
 #endif // _SHOOTERSTEIN_LOOP_H__

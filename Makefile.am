@@ -21,6 +21,7 @@ bin_PROGRAMS = shootersteind
 shootersteind_SOURCES = \
 	src/shootersteind/main.cpp \
 	src/shootersteind/client.cpp \
+	src/shootersteind/loop.cpp \
 	src/shootersteind/routes/routes.cpp \
 	src/shootersteind/routes/login.cpp \
 	src/shootersteind/routes/game.cpp \
