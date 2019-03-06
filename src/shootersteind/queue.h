@@ -8,21 +8,20 @@
 #include <new>
 #include <thread>
 
-#include <iostream>
-
 namespace shooterstein {
 
     template<class T>
     class Queue {
         T* _items;
-        std::size_t _start;
-        std::size_t _size;
-        std::size_t _cap;
+        volatile std::size_t _start;
+        volatile std::size_t _size;
+        volatile std::size_t _cap;
         std::mutex _mutex;
 
     public:
         typedef typename std::add_rvalue_reference<T>::type rvalue_reference;
-        typedef typename std::add_const<typename std::add_lvalue_reference<T>::type>::type const_reference;
+        //typedef typename std::add_const<typename std::add_lvalue_reference<T>::type>::type const_reference;
+        typedef typename std::add_lvalue_reference<typename std::add_const<T>::type>::type const_reference;
 
         Queue() {
             _items = NULL;
@@ -74,19 +73,33 @@ namespace shooterstein {
             return *this;
         }
 
+        void enqueue_with_maxsize(const_reference item, size_t max_size) {
+            _enqueue(item, max_size);
+        }
+
+        void enqueue_with_maxsize(rvalue_reference item, size_t max_size) {
+            _enqueue(::std::move(item), max_size);
+        }
+
         void enqueue(const_reference item) {
-            _enqueue(item);
+            _enqueue(item, 0);
         }
 
         void enqueue(rvalue_reference item) {
-            _enqueue(std::move(item));
+            _enqueue(::std::move(item), 0);
         }
 
     private:
 
         template <class F>
-        void _enqueue(F&& item) {
+        void _enqueue(F&& item, size_t max_size) {
             std::lock_guard<std::mutex> guard(_mutex);
+
+            if (max_size > 0) {
+                while (_size + 1 > max_size) {
+                    _dequeue_nolock();
+                }
+            }
 
             if (_size == _cap) {
                 _expand();
@@ -109,6 +122,14 @@ namespace shooterstein {
                 }
             }
 
+            auto result = _dequeue_nolock();
+
+            _mutex.unlock();
+            return result;
+        }
+
+    private:
+        T _dequeue_nolock() {
             T result(std::move(_at(0)));
 
             (&_at(0))->~T();
@@ -119,9 +140,10 @@ namespace shooterstein {
                 _contract();
             }
 
-            _mutex.unlock();
             return result;
         }
+
+    public:
 
         size_t size() {
             std::lock_guard<std::mutex> guard(_mutex);

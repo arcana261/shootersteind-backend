@@ -185,6 +185,18 @@ void queue_should_not_have_datarace() {
     filler.join();
 }
 
+void test_enqueue_with_max_size_should_drop_old() {
+    shooterstein::Queue<int> x;
+
+    x.enqueue_with_maxsize(1, 2);
+    x.enqueue_with_maxsize(2, 2);
+    x.enqueue_with_maxsize(3, 2);
+    x.enqueue_with_maxsize(4, 2);
+
+    T_CMPINT(x.dequeue(), ==, 3);
+    T_CMPINT(x.dequeue(), ==, 4);
+}
+
 int main(int argc, char* argv[]) {
     T_ADD(test_emptyqueue_should_have_length_zero);
     T_ADD(test_emptyqueue_should_be_empty);
@@ -201,6 +213,7 @@ int main(int argc, char* argv[]) {
     T_ADD(test_enqueue_dequeue_some_strings);
     T_ADD(dequeue_should_busy_wait_for_data);
     T_ADD(queue_should_not_have_datarace);
+    T_ADD(test_enqueue_with_max_size_should_drop_old);
 
     return T_RUN(argc, argv);
 }
