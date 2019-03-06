@@ -19,8 +19,15 @@ bin_PROGRAMS = shootersteind
 
 # libuvchan-0.la
 shootersteind_SOURCES = \
-	src/shootersteind/main.cpp
-shootersteind_LDFLAGS = $(AM_LDFLAGS)
+	src/shootersteind/main.cpp \
+	src/shootersteind/routes/routes.cpp \
+	src/shootersteind/routes/login.cpp \
+	src/shootersteind/routes/game.cpp \
+	src/shootersteind/handlers/login.cpp \
+	src/shootersteind/handlers/game.cpp
+shootersteind_LDFLAGS = $(AM_LDFLAGS) \
+	$(PTHREAD_LDFLAGS) $(PTHREAD_CFLAGS) \
+	$(BOOST_SYSTEM_LDFLAGS) $(BOOST_SYSTEM_LIBS)
 
 # tests
 check_PROGRAMS = \
