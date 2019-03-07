@@ -22,11 +22,16 @@ shootersteind_SOURCES = \
 	src/shootersteind/main.cpp \
 	src/shootersteind/client.cpp \
 	src/shootersteind/loop.cpp \
+	src/shootersteind/config.cpp \
+	src/shootersteind/engine.cpp \
 	src/shootersteind/routes/routes.cpp \
 	src/shootersteind/routes/login.cpp \
 	src/shootersteind/routes/game.cpp \
 	src/shootersteind/handlers/login.cpp \
-	src/shootersteind/handlers/game.cpp
+	src/shootersteind/handlers/game.cpp \
+	src/shootersteind/actions/join.cpp \
+	src/shootersteind/actions/move.cpp \
+	src/shootersteind/actions/direction.cpp
 shootersteind_LDFLAGS = $(AM_LDFLAGS) \
 	$(PTHREAD_LDFLAGS) $(PTHREAD_CFLAGS) \
 	$(BOOST_SYSTEM_LDFLAGS) $(BOOST_SYSTEM_LIBS)

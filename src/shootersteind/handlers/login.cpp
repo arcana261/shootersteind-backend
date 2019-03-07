@@ -1,4 +1,5 @@
 #include "handlers/login.h"
+#include "shootersteind/config.h"
 #include "crow.h"
 
 namespace shooterstein { namespace handlers {
@@ -12,8 +13,8 @@ namespace shooterstein { namespace handlers {
         auto username = x["username"].s();
 
         crow::json::wvalue result;
-        result["token"] = "abcd";
-        result["websocket"] = "http://127.0.0.1:8888/game";
+        result["token"] = username;
+        result["websocket"] = ::shooterstein::get_websocket_address();
 
         auto response = crow::response(result);
 

@@ -1,4 +1,5 @@
 #include "shootersteind/client.h"
+#include <iostream>
 
 ::shooterstein::Client::Client(::crow::websocket::connection* connection) {
     _worker = NULL;
@@ -32,7 +33,9 @@ void ::shooterstein::Client::start() {
 
     _worker = new ::std::thread([this](){
         while (!_isclosed()) {
-            _connection->send_text(_tosend.dequeue());
+            auto item = _tosend.dequeue();
+            ::std::cout << "[WS SENDING->](" << item << ")" << ::std::endl;
+            _connection->send_text(item);
         }
     });
 }

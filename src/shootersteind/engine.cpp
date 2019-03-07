@@ -1,3 +1,6 @@
+#include "engine.h"
+#include "config.h"
+
 #include <vector>
 #include <map>
 #include <cstring>
@@ -8,161 +11,330 @@
 #include <chrono>
 #include <thread>
 #include <functional>
+#include <cmath>
+#include <cstdlib>
 
-const double eps = 1e-6;
+#define PLAYER_COLLISION 10
+#define WALL_COLLISION 5
+
+namespace shooterstein {
+    namespace internal {
+        Engine* engine;
+    }
+
+    const double bullet_collision = 0.1;
+    //const double player_collision = 0.5;
+    const double wall_collision = 0.3;
+
+    namespace internal {
+        double clamp(double value, double max_value) {
+            if (value < EPS) {
+                return 0.0;
+            }
+
+            if (value > max_value - EPS) {
+                return max_value;
+            }
+
+            return value;
+        }
+    }
+
+    Coordinate::Coordinate() {
+        x = 0;
+        y = 0;
+    }
+
+    Coordinate::Coordinate(double x, double y) {
+        this->x = x;
+        this->y = y;
+    }
+
+    void Coordinate::clamp(double max_x, double max_y) {
+        x = internal::clamp(x, max_x);
+        y = internal::clamp(y, max_y);
+    }
+
+    ::crow::json::wvalue Coordinate::payload() {
+        ::crow::json::wvalue result;
+        result["x"] = x;
+        result["y"] = y;
+
+        return result;
+    }
+
+    InMapPointObject::InMapPointObject() {
+        location.x = 0;
+        location.y = 0;
+        collision = 0.0;
+        engine = NULL;
+    }
+
+    Bullet::Bullet(double x, double y, double initial_fuel, double direction_x, double direction_y) {
+        location.x = x;
+        location.y = y;
+        direction.x = direction_x;
+        direction.y = direction_y;
+        collision = bullet_collision;
+        fuel = initial_fuel;
+        engine = NULL;
+    }
+
+    Wall::Wall() {
+        location_start.x = 0.0;
+        location_start.y = 0.0;
+        location_end.x = 0.0;
+        location_end.y = 0.0;
+        collision = WALL_COLLISION;
+    }
+
+    Player::Player(::std::string const& name, Coordinate location) {
+        this->location = location;
+        reference_location = location;
+        this->name = name;
+        velocity.x = 0;
+        velocity.y = 0;
+        health = 100;
+        ammo_count = 5;
+        has_blink = true;
+        direction = 0;
+        last_update = ::std::chrono::system_clock::now();
+        collision = PLAYER_COLLISION;
+        engine = NULL;
+    }
+
+    void Player::move(Coordinate velocity) {
+        update();
+        this->velocity = velocity;
+        last_update = ::std::chrono::system_clock::now();
+        reference_location = location;
+    }
+
+    void Player::update() {
+        auto now = ::std::chrono::system_clock::now();
+        auto dt_ms = ::std::chrono::duration_cast<::std::chrono::milliseconds>(now - last_update).count();
+        double dt = ((double)dt_ms) / 1000.0;
+        location.x = reference_location.x + (velocity.x * PLAYER_SPEED * dt);
+        location.y = reference_location.y + (velocity.y * PLAYER_SPEED * dt);
+        location.clamp(engine->size().x, engine->size().y);
+    }
+
+    void Player::add_hp(int value) {
+        health += value;
+
+        if (health > 100) {
+            health = 100;
+        }
+    }
+
+    void Player::add_ammo(int value) {
+        ammo_count += value;
+    }
+
+    void Player::shoot_ammo() {
+        ammo_count--;
+    }
+
+    bool Player::has_ammo() {
+        return ammo_count > 0;
+    }
+
+    ::crow::json::wvalue Player::payload() {
+        ::crow::json::wvalue result;
+        result["type"] = "player";
+        result["hp"] = health;
+        result["position"] = location.payload();
+        result["velocity"] = velocity.payload();
+        result["direction"] = direction;
+        result["name"] = name;
+
+        return result;
+    }
+
+    bool point_collision(InMapPointObject const& o1, InMapPointObject const& o2) {
+        double delta_x = o1.location.x - o2.location.x;
+        double delta_y = o1.location.y - o2.location.y;
+        
+        double dist = ::std::sqrt(delta_x * delta_x + delta_y * delta_y);
+        if (o1.collision + o2.collision > dist) {
+            return true;
+        }
+        return false;
+    }
+
+    bool point_line_collision(InMapPointObject const& o1, Wall const& w1) {
+        int wall_type = 0; // Horizontal
+        if (abs(w1.location_start.x - w1.location_end.x) < EPS) {
+            wall_type = 1; // Vertical
+        }
+        double distance;
+        if (wall_type == 1) {
+            double value = o1.location.y;
+            if ((value < w1.location_start.y) != (value < w1.location_end.y)) // in the middle
+            {
+                distance = abs(w1.location_start.x - o1.location.x); 
+            }
+            else {
+                double delta_x_1 = w1.location_start.x - o1.location.x;
+                double delta_x_2 = w1.location_end.x - o1.location.x;
+
+                double delta_y_1 = w1.location_start.y - o1.location.y;
+                double delta_y_2 = w1.location_end.y - o1.location.y;
+
+                distance = std::min(::std::sqrt(delta_x_1 * delta_x_1 + delta_y_1 * delta_y_1), ::std::sqrt(delta_x_2 * delta_x_2 + delta_y_2 * delta_y_2));
+            }
+        }
+        else {
+            double value = o1.location.x;
+            if ((value < w1.location_start.x) != (value < w1.location_end.x)) // in the middle
+            {
+                distance = abs(w1.location_start.y - o1.location.y); 
+            }
+            else {
+                double delta_x_1 = w1.location_start.x - o1.location.x;
+                double delta_x_2 = w1.location_end.x - o1.location.x;
+
+                double delta_y_1 = w1.location_start.y - o1.location.y;
+                double delta_y_2 = w1.location_end.y - o1.location.y;
+
+                distance = std::min(::std::sqrt(delta_x_1 * delta_x_1 + delta_y_1 * delta_y_1), ::std::sqrt(delta_x_2 * delta_x_2 + delta_y_2 * delta_y_2));
+            }
+        }
+        if (distance < (w1.collision + o1.collision)) {
+            return true;
+        }
+        return false;
+    }
+
+    Engine::Engine(Engine const& x) {}
+    Engine::Engine(Engine&& x) {}
+    Engine& Engine::operator = (Engine const& x) {
+        return *this;
+    }
+    Engine& Engine::operator = (Engine&& x) {
+        return *this;
+    }
+
+    Engine::Engine(::std::chrono::milliseconds every, Coordinate size) {
+        _size = size;
+        _worker = NULL;
+        _exit = false;
+        _every = every;
+    }
+
+    Engine::~Engine() {
+        stop();
+    }
+
+    Coordinate Engine::size() {
+        return _size;
+    }
+
+    void Engine::start() {
+        std::lock_guard<std::mutex> guard(_mutex);
+
+        if (_worker != NULL) {
+            return;
+        }
+
+        _worker = new ::std::thread(
+            ::std::bind(&::shooterstein::Engine::_thread_loop, this));
+    }
+
+    void Engine::stop() {
+        _mutex.lock();
+
+        if (_worker == NULL) {
+            _mutex.unlock();
+            return;
+        }
+
+        auto worker = _worker;
+        _worker = NULL;
+        _mutex.unlock();
+
+        worker->join();
+        delete worker;
+    }
+
+    void Engine::_thread_loop() {
+        while (!_isclosed()) {
+            ::std::this_thread::sleep_for(_every);
+
+            _tick();
+        }
+    }
+
+    void Engine::_tick() {
+        _mutex.lock();
+        auto players = _get_players();
+        _mutex.unlock();
+
+        for (auto player : players) {
+            player->update();
+        }
+    }
+
+    ::std::vector<::std::shared_ptr<Player> > Engine::_get_players() {
+        ::std::vector<::std::shared_ptr<Player> > result;
+
+        for (auto player : _players) {
+            result.push_back(player);
+        }
+
+        return result;
+    }
+
+    bool Engine::_isclosed() {
+        std::lock_guard<std::mutex> guard(_mutex);
+        return _exit;
+    }
+    
+    void Engine::add_player(::std::shared_ptr<Player> player) {
+        std::lock_guard<std::mutex> guard(_mutex);
+        player->engine = this;
+        _players.insert(player);
+    }
+
+    ::crow::json::wvalue Engine::map() {
+        _mutex.lock();
+        auto players = _get_players();
+        _mutex.unlock();
+
+        ::crow::json::wvalue result;
+
+        result["type"] = "update";
+        ::crow::json::wvalue& payload = result["payload"];
+        for (int i = 0; i < (int)players.size(); i++) {
+            payload[i] = players[i]->payload();
+        }
+
+        return result;
+    }
+
+    Engine* get_engine() {
+        return internal::engine;
+    }
+
+    namespace internal {
+        void initialize_engine(::std::chrono::milliseconds every, Coordinate size) {
+            auto engine = new Engine(every, size);
+            engine->start();
+            internal::engine = engine;
+        }
+    }
+}
+
 const double bullet_speed = 10;
 const int bullet_damage = 30;
-const double bullet_collision = 0.1;
-const double player_collision = 0.5;
-const double wall_collision = 0.3;
 
 
-struct Coordinate {
-    double x;
-    double y;
-};
+/*
 
-struct Direction {
-    double x;
-    double y;
-};
-
-class InMapPointObject {
-    public: Coordinate location;
-    public: double collision;
-
-    public:
-        InMapPointObject (double x = 0, double y = 0, double collision_size = 0) {
-            location.x = x;
-            location.y = y;
-            collision = collision_size;
-        }
-};
-
-class Bullet: public InMapPointObject {
-    public: Direction direction;
-    public: double fuel; // how much distance can travel
-
-    public:
-        Bullet(double x = 0, double y = 0, double initial_fuel = 0, double direction_x = 0, double direction_y = 0) {
-            location.x = x;
-            location.y = y;
-            direction.x = direction_x;
-            direction.y = direction_y;
-            collision = bullet_collision;
-            fuel = initial_fuel;
-        }
-};
-
-struct Wall {
-    Coordinate location_start;
-    Coordinate location_end;
-    double collision;
-
-    public:
-        Wall(double x1 = 0, double y1 = 0, double x2 = 0, double y2 = 0)
-        {
-            location_start.x = x1;
-            location_start.y = y1;
-            location_end.x = x2;
-            location_end.y = y2;
-            collision = wall_collision;
-        }
-};
-
-struct Item {
-    Coordinate location;
-    bool is_used;
-    int type; // 0 -> Ammo, 1 -> Health Package
-    int value;
-    double collision;
-};
-
-class Player : public InMapPointObject{
-    public: int player_id;
-    public: bool is_alive;
-    public: int health;
-    public: int ammo;
-
-    public:
-        Player(double x = 0, double y = 0, int pid = 0, int hp = 0, int ammunation = 0) {
-            location.x = x;
-            location.y = y;
-            player_id = pid;
-            is_alive = true;
-            health = hp;
-            ammo = ammunation;
-            collision = player_collision;
-        }
-};
-
-struct locationBasedComparisonStruct {
-    bool operator() (const InMapPointObject& lhs, const InMapPointObject& rhs) const
-    {
-        Coordinate c1 = lhs.location;
-        Coordinate c2 = rhs.location;
-        if (abs(c1.x - c2.x) < eps)
-            return c1.y < c2.y;
-        return c1.x < c2.x;
-    }
-};
-
-bool point_collision(InMapPointObject o1, InMapPointObject o2) {
-    double delta_x = o1.location.x - o2.location.x;
-    double delta_y = o1.location.y - o2.location.y;
-    
-    double dist = sqrt(delta_x * delta_x + delta_y * delta_y);
-    if (o1.collision + o2.collision > dist)
-        return true;
-    return false;
-}
-
-bool point_line_collision(InMapPointObject o1, Wall w1) {
-    int wall_type = 0; // Horizontal
-    if (abs(w1.location_start.x - w1.location_end.x) < eps)
-        wall_type = 1; // Vertical
-    double distance;
-    if (wall_type == 1) {
-        double value = o1.location.y;
-        if ((value < w1.location_start.y) != (value < w1.location_end.y)) // in the middle
-        {
-            distance = abs(w1.location_start.x - o1.location.x); 
-        }
-        else {
-            double delta_x_1 = w1.location_start.x - o1.location.x;
-            double delta_x_2 = w1.location_end.x - o1.location.x;
-
-            double delta_y_1 = w1.location_start.y - o1.location.y;
-            double delta_y_2 = w1.location_end.y - o1.location.y;
-
-            distance = std::min(sqrt(delta_x_1 * delta_x_1 + delta_y_1 * delta_y_1), sqrt(delta_x_2 * delta_x_2 + delta_y_2 * delta_y_2));
-        }
-    }
-    else {
-        double value = o1.location.x;
-        if ((value < w1.location_start.x) != (value < w1.location_end.x)) // in the middle
-        {
-            distance = abs(w1.location_start.y - o1.location.y); 
-        }
-        else {
-            double delta_x_1 = w1.location_start.x - o1.location.x;
-            double delta_x_2 = w1.location_end.x - o1.location.x;
-
-            double delta_y_1 = w1.location_start.y - o1.location.y;
-            double delta_y_2 = w1.location_end.y - o1.location.y;
-
-            distance = std::min(sqrt(delta_x_1 * delta_x_1 + delta_y_1 * delta_y_1), sqrt(delta_x_2 * delta_x_2 + delta_y_2 * delta_y_2));
-        }
-    }
-    if (distance < (w1.collision + o1.collision))
-        return true;
-    return false;
-}
 
 class Engine {
     public: int ticksPerSecond;
     protected: int gameTick;
-    protected: double width, height;
     protected: std::set<Player, locationBasedComparisonStruct> players;
     protected: std::set<Bullet, locationBasedComparisonStruct> bullets;
     protected: std::vector<Wall> walls;
@@ -194,7 +366,7 @@ class Engine {
             for (auto bullet: bullets) {
                 Coordinate c = bullet.location;
                 Direction d = bullet.direction;
-                double len = sqrt(d.x * d.x + d.y * d.y);
+                double len = ::std::sqrt(d.x * d.x + d.y * d.y);
                 double d1 = d.x / len;
                 double d2 = d.y / len;
                 d1 *= bullet_speed / ticksPerSecond;
@@ -322,3 +494,4 @@ int main() {
     }
     return 0;
 }
+*/

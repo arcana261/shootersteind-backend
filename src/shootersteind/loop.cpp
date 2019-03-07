@@ -1,5 +1,6 @@
 #include "shootersteind/loop.h"
 #include <functional>
+#include "shootersteind/engine.h"
 
 namespace shooterstein { namespace internal {
     Loop *_main_loop;
@@ -70,6 +71,8 @@ void ::shooterstein::Loop::stop() {
 
 void ::shooterstein::Loop::_thread_loop() {
     while (!_isclosed()) {
+        ::std::this_thread::sleep_for(_every);
+
         auto data = _next();
         auto clients = _get_clients();
 
@@ -97,7 +100,7 @@ bool ::shooterstein::Loop::_isclosed() {
 }
 
 ::crow::json::wvalue shooterstein::Loop::_next() {
-    return ::crow::json::wvalue();
+    return ::shooterstein::get_engine()->map();
 }
 
 ::shooterstein::Loop* ::shooterstein::get_loop() {
