@@ -128,6 +128,36 @@ namespace shooterstein {
             return result;
         }
 
+        bool dequeue_with_timeout(::std::chrono::milliseconds sleep, T& result) {
+            auto deadline = std::chrono::system_clock::now();
+            deadline += sleep;
+            int iteration = 0;
+
+            while (true) {
+                _mutex.lock();
+                if (_size == 0) {
+                    _mutex.unlock();
+                    //std::this_thread::yield();
+                    std::this_thread::sleep_for(::std::chrono::microseconds(1));
+
+                    iteration++;
+                    if ((iteration % 1000) == 0) {
+                        auto now = std::chrono::system_clock::now();
+                        if (now >= deadline) {
+                            return false;
+                        }
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            result = _dequeue_nolock();
+
+            _mutex.unlock();
+            return true;
+        }
+
     private:
         T _dequeue_nolock() {
             T result(std::move(_at(0)));

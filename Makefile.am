@@ -31,7 +31,8 @@ shootersteind_SOURCES = \
 	src/shootersteind/handlers/game.cpp \
 	src/shootersteind/actions/join.cpp \
 	src/shootersteind/actions/move.cpp \
-	src/shootersteind/actions/direction.cpp
+	src/shootersteind/actions/direction.cpp \
+	src/shootersteind/actions/shoot.cpp
 shootersteind_LDFLAGS = $(AM_LDFLAGS) \
 	$(PTHREAD_LDFLAGS) $(PTHREAD_CFLAGS) \
 	$(BOOST_SYSTEM_LDFLAGS) $(BOOST_SYSTEM_LIBS)

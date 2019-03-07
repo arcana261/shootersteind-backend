@@ -15,6 +15,7 @@
 #include <cstdlib>
 
 #define PLAYER_COLLISION 10
+#define BULLET_COLLISION 2
 #define WALL_COLLISION 5
 
 namespace shooterstein {
@@ -22,7 +23,7 @@ namespace shooterstein {
         Engine* engine;
     }
 
-    const double bullet_collision = 0.1;
+    //const double bullet_collision = 0.1;
     //const double player_collision = 0.5;
     const double wall_collision = 0.3;
 
@@ -70,14 +71,49 @@ namespace shooterstein {
         engine = NULL;
     }
 
-    Bullet::Bullet(double x, double y, double initial_fuel, double direction_x, double direction_y) {
-        location.x = x;
-        location.y = y;
-        direction.x = direction_x;
-        direction.y = direction_y;
-        collision = bullet_collision;
-        fuel = initial_fuel;
+    Bullet::Bullet() {
+        location.x = 0;
+        location.y = 0;
+        direction.x = 0;
+        direction.y = 0;
+        collision = BULLET_COLLISION;
+        fuel = 0;
         engine = NULL;
+        last_update = ::std::chrono::system_clock::now();
+    }
+
+    bool Bullet::update() {
+        auto now = ::std::chrono::system_clock::now();
+        auto dt_ms = ::std::chrono::duration_cast<::std::chrono::milliseconds>(now - last_update).count();
+        double dt = ((double)dt_ms) / 1000.0;
+        double dx = velocity.x * BULLET_SPEED * dt;
+        double dy = velocity.y * BULLET_SPEED * dt;
+        double traveled = ::std::sqrt(dx*dx + dy*dy);
+        bool result = true;
+        if (traveled > fuel) {
+            result = false;
+
+            dt = fuel / ::std::sqrt(velocity.x*velocity.x*BULLET_SPEED*BULLET_SPEED+velocity.y*velocity.y*BULLET_SPEED*BULLET_SPEED);
+            dx = velocity.x * BULLET_SPEED * dt;
+            dy = velocity.y * BULLET_SPEED * dt;
+        }
+
+        location.x = reference_location.x + dx;
+        location.y = reference_location.y + dy;
+        location.clamp(engine->size().x, engine->size().y);
+
+        return result;
+    }
+
+    ::crow::json::wvalue Bullet::payload() {
+        ::crow::json::wvalue result;
+        result["type"] = "bullet";
+        result["id"] = id;
+        result["position"] = location.payload();
+        result["direction"] = direction.payload();
+        result["speed"] = BULLET_SPEED;
+
+        return result;
     }
 
     Wall::Wall() {
@@ -142,21 +178,23 @@ namespace shooterstein {
     ::crow::json::wvalue Player::payload() {
         ::crow::json::wvalue result;
         result["type"] = "player";
+        result["id"] = id;
         result["hp"] = health;
         result["position"] = location.payload();
         result["velocity"] = velocity.payload();
         result["direction"] = direction;
         result["name"] = name;
+        result["ammo"] = ammo_count;
 
         return result;
     }
 
-    bool point_collision(InMapPointObject const& o1, InMapPointObject const& o2) {
-        double delta_x = o1.location.x - o2.location.x;
-        double delta_y = o1.location.y - o2.location.y;
+    bool player_bullet_collision(::std::shared_ptr<Player> const& o1, ::std::shared_ptr<Bullet> const& o2) {
+        double delta_x = o1->location.x - o2->location.x;
+        double delta_y = o1->location.y - o2->location.y;
         
         double dist = ::std::sqrt(delta_x * delta_x + delta_y * delta_y);
-        if (o1.collision + o2.collision > dist) {
+        if (o1->collision + o2->collision > dist) {
             return true;
         }
         return false;
@@ -268,10 +306,42 @@ namespace shooterstein {
     void Engine::_tick() {
         _mutex.lock();
         auto players = _get_players();
+        auto bullets = _get_bullets();
         _mutex.unlock();
 
         for (auto player : players) {
             player->update();
+        }
+
+        ::std::vector<::std::shared_ptr<Bullet> > bullets_to_remove;
+        for (auto bullet : bullets) {
+            if (!bullet->update()) {
+                bullets_to_remove.push_back(bullet);
+                continue;
+            }
+
+            bool hit = false;
+
+            // check player collision
+            for (auto player: players) {
+                if (player_bullet_collision(player, bullet)) {
+                    player->health -= BULLET_DAMAGE;
+                    hit = true;
+                    break;
+                }
+            }
+            if (hit) {
+                bullets_to_remove.push_back(bullet);
+                continue;
+            }
+        }
+
+        if (!bullets_to_remove.empty()) {
+            _mutex.lock();
+            for (auto bullet : bullets_to_remove) {
+                _bullets.erase(bullet);
+            }
+            _mutex.unlock();
         }
     }
 
@@ -285,6 +355,21 @@ namespace shooterstein {
         return result;
     }
 
+    void Engine::remove_player(::std::shared_ptr<Player> player) {
+        std::lock_guard<std::mutex> guard(_mutex);
+        _players.erase(player);
+    }
+
+    ::std::vector<::std::shared_ptr<Bullet> > Engine::_get_bullets() {
+        ::std::vector<::std::shared_ptr<Bullet> > result;
+
+        for (auto bullet : _bullets) {
+            result.push_back(bullet);
+        }
+
+        return result;
+    }
+
     bool Engine::_isclosed() {
         std::lock_guard<std::mutex> guard(_mutex);
         return _exit;
@@ -293,12 +378,21 @@ namespace shooterstein {
     void Engine::add_player(::std::shared_ptr<Player> player) {
         std::lock_guard<std::mutex> guard(_mutex);
         player->engine = this;
+        player->id = _nextid++;
         _players.insert(player);
+    }
+
+    void Engine::add_bullet(::std::shared_ptr<Bullet> bullet) {
+        std::lock_guard<std::mutex> guard(_mutex);
+        bullet->engine = this;
+        bullet->id = _nextid++;
+        _bullets.insert(bullet);
     }
 
     ::crow::json::wvalue Engine::map() {
         _mutex.lock();
         auto players = _get_players();
+        auto bullets = _get_bullets();
         _mutex.unlock();
 
         ::crow::json::wvalue result;
@@ -307,6 +401,10 @@ namespace shooterstein {
         ::crow::json::wvalue& payload = result["payload"];
         for (int i = 0; i < (int)players.size(); i++) {
             payload[i] = players[i]->payload();
+        }
+        int offset = (int)players.size();
+        for (int i = 0; i < (int)bullets.size(); i++) {
+            payload[offset+i] = bullets[i]->payload();
         }
 
         return result;
@@ -325,8 +423,8 @@ namespace shooterstein {
     }
 }
 
-const double bullet_speed = 10;
-const int bullet_damage = 30;
+//const double bullet_speed = 10;
+//const int bullet_damage = 30;
 
 
 /*

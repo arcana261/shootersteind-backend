@@ -5,6 +5,7 @@
 #include "shootersteind/config.h"
 #include "shootersteind/engine.h"
 #include <cstring>
+#include <cstdlib>
 
 int main(int argc, char* argv[])  {
     crow::SimpleApp app;
@@ -14,6 +15,11 @@ int main(int argc, char* argv[])  {
             ::shooterstein::internal::set_websocket_address(::std::string(argv[i+1]));
             i++;
         }
+    }
+
+    char *websock_addr = ::std::getenv("SHOOTERSTEIN_WEBSOCKET_ADDRESS");
+    if (websock_addr != NULL && ::std::strlen(websock_addr) > 0) {
+        ::shooterstein::internal::set_websocket_address(::std::string(websock_addr));
     }
 
     shooterstein::register_routes(app);

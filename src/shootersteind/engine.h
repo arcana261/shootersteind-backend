@@ -26,17 +26,13 @@ namespace shooterstein {
         ::crow::json::wvalue payload();
     };
 
-    struct Direction {
-        double x;
-        double y;
-    };
-
     class InMapPointObject {
         public: Coordinate location;
         public: Coordinate reference_location;
         public: Coordinate velocity;
         public: double collision;
         public: Engine *engine;
+        public: int id;
 
     public:
         InMapPointObject();
@@ -45,11 +41,15 @@ namespace shooterstein {
     };
 
     class Bullet: public InMapPointObject {
-        public: Direction direction;
+        public: Coordinate direction;
         public: double fuel; // how much distance can travel
+        ::std::chrono::system_clock::time_point last_update;
 
     public:
-        Bullet(double x = 0, double y = 0, double initial_fuel = 0, double direction_x = 0, double direction_y = 0);
+        Bullet();
+        
+        bool update();
+        ::crow::json::wvalue payload();
     };
 
     struct Wall {
@@ -93,6 +93,25 @@ namespace shooterstein {
     namespace internal {
         struct locationBasedPlayerComparisonStruct {
             bool operator() (const ::std::shared_ptr<Player>& lhs, const ::std::shared_ptr<Player>& rhs) const {
+                if (lhs->id == rhs->id) {
+                    return false;
+                }
+
+                Coordinate c1 = lhs->location;
+                Coordinate c2 = rhs->location;
+                if (abs(c1.x - c2.x) < EPS) {
+                    return c1.y < c2.y;
+                }
+                return c1.x < c2.x;
+            }
+        };
+
+        struct locationBasedBulletComparisonStruct {
+            bool operator() (const ::std::shared_ptr<Bullet>& lhs, const ::std::shared_ptr<Bullet>& rhs) const {
+                if (lhs->id == rhs->id) {
+                    return false;
+                }
+
                 Coordinate c1 = lhs->location;
                 Coordinate c2 = rhs->location;
                 if (abs(c1.x - c2.x) < EPS) {
@@ -108,8 +127,10 @@ namespace shooterstein {
         ::std::mutex _mutex;
         volatile bool _exit;
         std::set<::std::shared_ptr<Player>, internal::locationBasedPlayerComparisonStruct> _players;
+        std::set<::std::shared_ptr<Bullet>, internal::locationBasedBulletComparisonStruct> _bullets;
         Coordinate _size;
         ::std::chrono::milliseconds _every;
+        volatile int _nextid;
 
         Engine(Engine const& x);
         Engine(Engine&& x);
@@ -125,6 +146,8 @@ namespace shooterstein {
         void stop();
 
         void add_player(::std::shared_ptr<Player> player);
+        void remove_player(::std::shared_ptr<Player> player);
+        void add_bullet(::std::shared_ptr<Bullet> bullet);
 
         ::crow::json::wvalue map();
 
@@ -134,6 +157,7 @@ namespace shooterstein {
         bool _isclosed();
 
         ::std::vector<::std::shared_ptr<Player> > _get_players();
+        ::std::vector<::std::shared_ptr<Bullet> > _get_bullets();
     };
 
     Engine* get_engine();
